@@ -1,0 +1,58 @@
+name: Publish
+
+on:
+    workflow_run:
+        workflows: ['build n test']
+        types: [completed]
+    workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.5.1' # 22.5.1 is a temporary fix since 22 now points to 22.5.0 that has a bug that breaks installation
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: install
+        run: npm ci
+      
+      - name: build
+        run: npm run build
+
+      - name: coverage
+        run: npm run coverage
+
+      - name: Read package.json
+        run: |
+          echo 'PACKAGE_JSON<<EOF' >> $GITHUB_ENV
+          cat ./package.json >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+
+      - name: release browser bundles
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            LICENSE
+            dist/bundles/*.js
+          tag_name: v${{ fromJson(env.PACKAGE_JSON).version }}
+          name: "v${{ fromJson(env.PACKAGE_JSON).version }} browser bundles"
+
+      - name: send report to coveralls.io
+        if: ${{ fromJson(env.PACKAGE_JSON).nodeBrowserSkel.syncWithCoveralls }}
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: NPM publish
+        if: ${{ ! fromJson(env.PACKAGE_JSON).private }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

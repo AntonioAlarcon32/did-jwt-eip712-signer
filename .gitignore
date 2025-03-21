@@ -1,0 +1,27 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules
+
+# Output of 'npm pack'
+*.tgz
+
+# Coverage
+coverage
+
+# Environment files
+*.env
+
+# Test temporal files
+.nbs
+.tsconfig.json
+.types
+
+# docs temporal files
+.nojekyll
+
+# built files
+dist

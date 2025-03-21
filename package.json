@@ -1,0 +1,174 @@
+{
+  "name": "did-jwt-eip712-signer",
+  "description": "My package is wonderful.",
+  "private": true,
+  "keywords": [
+    "keyword1",
+    "keyword2"
+  ],
+  "author": {
+    "name": "My name",
+    "email": "email@myemaildomain.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://myrepoprovider.com/username/my-package-name.git"
+  },
+  "license": "EUPL-1.2",
+  "version": "0.9.4",
+  "main": "./dist/cjs/index.node.js",
+  "browser": "./dist/esm/index.browser.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "node": {
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/esm/index.node.js"
+        },
+        "require": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/cjs/index.node.js"
+        }
+      },
+      "script": "./dist/bundles/iife.js",
+      "default": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/esm/index.browser.js"
+      }
+    },
+    "./dist/cjs/index.node": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/cjs/index.node.js"
+    },
+    "./dist/esm/index.node": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/esm/index.node.js"
+    },
+    "./dist/esm/index.browser": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/esm/index.browser.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "imports": {
+    "#pkg": {
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/cjs/index.node.js"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/esm/index.node.js"
+      },
+      "default": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/esm/index.browser.js"
+      }
+    }
+  },
+  "directories": {
+    "build": "build",
+    "bundles": "dist/bundles",
+    "dist": "dist",
+    "docs": "docs",
+    "src": "src",
+    "test": "test",
+    "benchmark": "benchmark",
+    "temp": ".nbs",
+    "mocha-ts": ".nbs/mocha-ts"
+  },
+  "scripts": {
+    "_build:cleantypes": "rimraf .types",
+    "_build:cjsAndesmPkgJsons": "node ./build/bin/post-build.js",
+    "build": "run-s lint:src build:js lint:test docs",
+    "build:js": "rollup -c build/rollup.config.mjs",
+    "postbuild:js": "run-s _build:cleantypes _build:cjsAndesmPkgJsons",
+    "clean": "rimraf .nbs coverage dist .types docs",
+    "coverage": "c8 --clean --check-coverage --exclude \"{src/ts/**/*.spec.ts,src/ts/**/*.test.ts,test,test-vectors,build}\" --exclude-after-remap --reporter=text --reporter=lcov node ./build/bin/mocha-ts.js --commonjs ",
+    "docs": "node build/build.docs.js",
+    "git:add": "git add -A",
+    "lint": "ts-standard --fix",
+    "lint:src": "ts-standard --fix \"src/**/!(*.spec|*.test).ts\"",
+    "lint:test": "ts-standard --fix \"{test/**/*.ts,src/**/*.spec.ts,src/**/*.test.ts}\"",
+    "mocha-ts": "node --experimental-modules --experimental-json-modules --es-module-specifier-resolution=node ./build/bin/mocha-ts.js ",
+    "mocha-ts:cjs": "node ./build/bin/mocha-ts.js --commonjs ",
+    "mocha-ts:watch": "npm run mocha-ts:cjs -- --watch --timeout 0",
+    "mocha-ts:browser": "node build/testing/browser/index.js ",
+    "mocha-ts:browser-headless": "node build/testing/browser/index.js headless ",
+    "preversion": "run-s clean lint:src build:js lint:test coverage test:browser-headless",
+    "version": "run-s docs git:add",
+    "postversion": "git push --follow-tags",
+    "test": "run-s test:node test:browser-headless",
+    "test:browser": "npm run mocha-ts:browser",
+    "test:browser-headless": "npm run mocha-ts:browser-headless",
+    "test:node": "run-s test:node-cjs test:node-esm",
+    "test:node-cjs": "npm run mocha-ts:cjs ",
+    "test:node-esm": "npm run mocha-ts ",
+    "watch": "npm run mocha-ts:watch ",
+    "prepare": "npm run build"
+  },
+  "ts-standard": {
+    "project": "tsconfig.json",
+    "env": [
+      "mocha"
+    ],
+    "globals": [
+      "IS_BROWSER",
+      "browser",
+      "page",
+      "chai"
+    ],
+    "ignore": [
+      "dist/**/*",
+      "examples/**/*",
+      "types/**/*",
+      "benchmark/**/*"
+    ]
+  },
+  "nodeBrowserSkel": {
+    "syncWithCoveralls": false,
+    "badges": {
+      "workflow": true,
+      "coveralls": false
+    },
+    "git": {
+      "branch": "main"
+    }
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@rollup/plugin-inject": "^5.0.5",
+    "@rollup/plugin-json": "^6.0.1",
+    "@rollup/plugin-multi-entry": "^6.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^6.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.0",
+    "@types/chai": "^5.0.0",
+    "@types/mocha": "^10.0.4",
+    "c8": "^10.1.2",
+    "chai": "^5.1.1",
+    "dotenv": "^16.3.1",
+    "glob": "^11.0.0",
+    "json5": "^2.2.3",
+    "minimatch": "^10.0.1",
+    "mocha": "^10.6.0",
+    "npm-run-all": "^4.1.5",
+    "pirates": "^4.0.6",
+    "puppeteer": "^23.5.0",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.3.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "ts-standard": "^12.0.2",
+    "tslib": "^2.6.2",
+    "typedoc-plugin-markdown": "^4.2.1",
+    "typescript": "^5.0.2"
+  },
+  "dependencies": {
+    "@juanelas/solidity-types-from-json": "^1.0.1",
+    "did-jwt": "github:AntonioAlarcon32/improved-did-jwt",
+    "did-resolver": "^4.1.0",
+    "ethers": "^6.13.5"
+  }
+}

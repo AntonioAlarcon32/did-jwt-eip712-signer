@@ -1,0 +1,63 @@
+# Build scripts
+build
+
+# Bundles
+dist/bundles
+
+# Docs src
+src/docs
+
+# Test files
+test
+__tests__
+**/*.spec.ts
+**/*.test.ts
+test-vectors
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Output of 'npm pack'
+*.tgz
+
+# Visual Studio Code
+.vscode
+
+# IntelliJ
+.idea
+
+# Coverage
+coverage
+
+# GitHub
+.github
+
+# GitLab
+.gitlab-ci.yml
+.gitlab-ci.yaml
+
+# tsconfig
+tsconfig.json
+
+# Environment files
+*.env
+*.env.*
+
+# Test temporal files
+.nbs
+.tsconfig.json
+.types
+
+# docs temporal files
+.nojekyll
+
+# code of conduct
+CODE_OF_CONDUCT.md
+
+# TODO
+TO-DO.txt
+
+# benchmark
+benchmark
