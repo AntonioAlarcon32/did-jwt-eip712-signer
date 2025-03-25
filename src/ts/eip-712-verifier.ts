@@ -5,7 +5,6 @@ import { TypedDataDomain, verifyTypedData } from 'ethers'
 
 const verificationMethods: string[] = [
   'EcdsaSecp256k1VerificationKey2019',
-
   'EcdsaSecp256k1RecoveryMethod2020',
   'Secp256k1VerificationKey2018',
   'Secp256k1SignatureVerificationKey2018',
@@ -14,7 +13,10 @@ const verificationMethods: string[] = [
 
 export class Eip712Verifier extends AbstractVerifier {
   getSupportedVerificationMethods (alg?: string): string[] {
-    return verificationMethods
+    if (alg === 'EIP712') {
+      return verificationMethods
+    }
+    return []
   }
 
   verify (
