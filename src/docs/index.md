@@ -94,3 +94,9 @@ const verifiedVC = await verifyCredential(
 ## API reference documentation
 
 [Check the API](../../docs/API.md)
+
+## Funding
+
+This initiative is carried out within the framework of funds from the Recovery, Transformation, and Resilience Plan, financed by the European Union (Next Generation), the project of the Government of Spain that outlines the roadmap for the modernization of the Spanish economy, the recovery of economic growth, and job creation, for the solid, inclusive, and resilient economic reconstruction after the COVID-19 crisis, and to address the challenges of the next decade.
+
+![Logos](./logos.jpeg)
