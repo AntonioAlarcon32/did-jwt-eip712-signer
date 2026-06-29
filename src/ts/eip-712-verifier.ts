@@ -1,7 +1,7 @@
 import { jsonToSolidityTypes } from '@juanelas/solidity-types-from-json'
 import { AbstractVerifier, decodeJWT } from 'did-jwt'
-import { VerificationMethod } from 'did-resolver'
-import { TypedDataDomain, verifyTypedData } from 'ethers'
+import { type VerificationMethod } from 'did-resolver'
+import { type TypedDataDomain, verifyTypedData } from 'ethers'
 
 const verificationMethods: string[] = [
   'EcdsaSecp256k1VerificationKey2019',
@@ -11,7 +11,55 @@ const verificationMethods: string[] = [
   'EcdsaPublicKeySecp256k1'
 ]
 
+export interface Eip712VerifierOptions {
+  /**
+   * Pins expected values for EIP-712 domain fields. Any field set here must match the
+   * `domain` carried in the JWT payload exactly, otherwise verification fails before
+   * the signature is even checked. Use this to stop tokens signed under a different
+   * application domain (name/version/verifyingContract) from being replayed here.
+   * `chainId` presence is always required regardless of this option.
+   */
+  expectedDomain?: Pick<TypedDataDomain, 'name' | 'version' | 'chainId' | 'verifyingContract'>
+}
+
 export class Eip712Verifier extends AbstractVerifier {
+  static supportedAlgorithmsAndVerificationMethods: Record<string, string[]> = {
+    EIP712: verificationMethods
+  }
+
+  private readonly expectedDomain?: Eip712VerifierOptions['expectedDomain']
+
+  constructor (options: Eip712VerifierOptions = {}) {
+    super()
+    this.expectedDomain = options.expectedDomain
+  }
+
+  private checkDomainPolicy (domain: TypedDataDomain): void {
+    if (this.expectedDomain === undefined) return
+    const mismatches: string[] = []
+    const { name, version, chainId, verifyingContract } = this.expectedDomain
+    if (name != null && domain.name !== name) {
+      mismatches.push(`name "${String(domain.name)}" != "${name}"`)
+    }
+    if (version != null && domain.version !== version) {
+      mismatches.push(`version "${String(domain.version)}" != "${version}"`)
+    }
+    if (chainId != null && domain.chainId?.toString() !== chainId.toString()) {
+      mismatches.push(`chainId "${String(domain.chainId)}" != "${chainId.toString()}"`)
+    }
+    if (
+      verifyingContract != null &&
+      domain.verifyingContract?.toLowerCase() !== verifyingContract.toLowerCase()
+    ) {
+      mismatches.push(`verifyingContract "${String(domain.verifyingContract)}" != "${verifyingContract}"`)
+    }
+    if (mismatches.length > 0) {
+      // deliberately NOT `invalid_signature`: a domain policy failure is the same for
+      // every authenticator, so verifyJWT should abort rather than retry
+      throw new Error(`Domain policy violation: ${mismatches.join('; ')}`)
+    }
+  }
+
   getSupportedVerificationMethods (alg?: string): string[] {
     if (alg === 'EIP712') {
       return verificationMethods
@@ -29,57 +77,50 @@ export class Eip712Verifier extends AbstractVerifier {
       throw new Error(`Unsupported algorithm: ${alg}`)
     }
 
-    const availableAuthenticators: boolean =
-      authenticators.find((a: VerificationMethod) => {
-        return (a.blockchainAccountId ?? a.ethereumAddress) !== undefined
-      }) !== undefined
-
-    if (!availableAuthenticators) {
-      throw new Error('No available authenticators')
-    }
-
-    const fullJwt: string = data + '.' + signature
+    const fullJwt = data + '.' + signature
     const { header, payload } = decodeJWT(fullJwt)
-    const dataObj = {
-      header,
-      payload
-    }
 
-    // Check correct algorithm in header
     if (header.alg !== 'EIP712') {
       throw new Error('Invalid JWT algorithm')
     }
-
-    // Check for the domain
-    if (payload.domain === undefined) {
+    if (payload.domain === undefined || payload.domain === null) {
       throw new Error('Domain should be included in the payload')
     }
-
     const domain = payload.domain as TypedDataDomain
-    const types = jsonToSolidityTypes(dataObj, { mainTypeName: 'JWT' })
-    const solidityTypes = types.types
-    const signatureFormatted = signature
-    const recoveredAddress = verifyTypedData(domain, solidityTypes, dataObj, signatureFormatted)
-    const signer = authenticators.find(authenticator => {
+    if (domain.chainId === undefined || domain.chainId === null) {
+      throw new Error('Domain must include chainId to prevent cross-chain replay')
+    }
+    const domainChainId = domain.chainId.toString()
+    this.checkDomainPolicy(domain)
+
+    const dataObj = { header, payload }
+    const { types } = jsonToSolidityTypes(dataObj, { mainTypeName: 'JWT' })
+    const recoveredAddress = verifyTypedData(domain, types, dataObj, signature).toLowerCase()
+
+    const matched = authenticators.find(authenticator => {
       if (typeof authenticator.blockchainAccountId === 'string') {
-        const [, chainId, address] = authenticator.blockchainAccountId.split(':')
-        if (address.toLowerCase() === recoveredAddress.toLowerCase()) {
-          if (domain?.chainId !== undefined && domain.chainId !== null) {
-            return domain.chainId.toString() === chainId
-          }
-          return true
-        }
-      } else if (typeof authenticator.ethereumAddress === 'string') {
-        if (domain.chainId !== undefined && domain.chainId !== null) {
-          return authenticator.ethereumAddress.toLowerCase() === recoveredAddress.toLowerCase()
-        }
+        const parts = authenticator.blockchainAccountId.split(':')
+        if (parts.length !== 3) return false
+        const [, chainId, address] = parts
+        return address.toLowerCase() === recoveredAddress && chainId === domainChainId
+      }
+      if (typeof authenticator.ethereumAddress === 'string') {
+        return authenticator.ethereumAddress.toLowerCase() === recoveredAddress
       }
       return false
     })
 
-    if (signer === undefined) {
-      throw new Error('Signature verification failed')
+    if (matched === undefined) {
+      const hasAddressed = authenticators.some(a =>
+        typeof a.blockchainAccountId === 'string' || typeof a.ethereumAddress === 'string'
+      )
+      // `invalid_signature` lets did-jwt's verifyJWT loop move on to the next
+      // authenticator instead of aborting on mixed-key DID documents
+      if (!hasAddressed) {
+        throw new Error('invalid_signature: No available authenticators with an Ethereum address')
+      }
+      throw new Error('invalid_signature: Signature verification failed: no authenticator matched the recovered address')
     }
-    return signer
+    return matched
   }
 }

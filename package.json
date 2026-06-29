@@ -137,6 +137,7 @@
     }
   },
   "devDependencies": {
+    "@metamask/eth-sig-util": "^8.2.0",
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-inject": "^5.0.5",
     "@rollup/plugin-json": "^6.0.1",
